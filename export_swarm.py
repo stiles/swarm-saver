@@ -14,6 +14,12 @@ S3_PREFIX = os.getenv("S3_PREFIX") or os.getenv("S3_PATH")
 AWS_PROFILE = os.getenv("AWS_PROFILE") or os.getenv("MY_PERSONAL_PROFILE") or os.getenv("AWS_DEFAULT_PROFILE")
 AWS_REGION = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
 
+# Normalize env so downstream AWS SDKs also see the intended profile/region
+if AWS_PROFILE:
+    os.environ["AWS_PROFILE"] = AWS_PROFILE
+if AWS_REGION:
+    os.environ["AWS_DEFAULT_REGION"] = AWS_REGION
+
 # tiny config
 V = datetime.utcnow().strftime("%Y%m%d")   # version date
 LIMIT = 250                                # API max page size
@@ -73,9 +79,11 @@ def upload_to_s3(paths):
             boto3.session.Session(region_name=AWS_REGION)
         )
         s3 = session.client("s3")
-        prof_display = AWS_PROFILE or session.profile_name or "default"
+        prof_display = AWS_PROFILE or session.profile_name or os.getenv("AWS_PROFILE") or "default"
+        region_display = AWS_REGION or session.region_name or os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or ""
         pref_display = (S3_PREFIX.rstrip("/") + "/") if S3_PREFIX else ""
-        print(f"Uploading to s3://{S3_BUCKET}/{pref_display} using profile '{prof_display}'".rstrip("/"))
+        region_note = f", region '{region_display}'" if region_display else ""
+        print((f"Uploading to s3://{S3_BUCKET}/{pref_display} using profile '{prof_display}'{region_note}") .rstrip("/"))
         for p in paths:
             name = p.name
             key = f"{S3_PREFIX.rstrip('/')}/{name}" if S3_PREFIX else name
