@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError, ProfileNotFound
 
-load_dotenv()
+load_dotenv(override=True)
 token = os.getenv("FOURSQUARE_TOKEN")
 S3_BUCKET = os.getenv("S3_BUCKET")
 S3_PREFIX = os.getenv("S3_PREFIX") or os.getenv("S3_PATH")
