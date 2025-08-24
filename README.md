@@ -47,6 +47,10 @@ export AWS_REGION="us-east-1"  # or your preferred region
 uv run ./export_swarm.py
 # or
 uv run python export_swarm.py
+
+# optional flags
+uv run ./export_swarm.py --no-s3     # skip S3 upload
+uv run ./export_swarm.py --dry-run   # show S3 keys, do not upload
 ```
 
 The script writes these files:

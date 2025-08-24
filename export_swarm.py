@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, time, json, csv, math, sys
+import os, time, json, csv, math, sys, argparse
 from datetime import datetime
 from pathlib import Path
 import requests
@@ -69,7 +69,7 @@ def as_feature(c):
     }
     return {"type":"Feature","geometry":{"type":"Point","coordinates":[lng,lat]},"properties":props}
 
-def upload_to_s3(paths):
+def upload_to_s3(paths, *, dry_run: bool = False):
     if not S3_BUCKET:
         return
     try:
@@ -93,8 +93,11 @@ def upload_to_s3(paths):
                 "text/csv" if name.endswith(".csv") else
                 "application/octet-stream"
             )
-            s3.upload_file(str(p), S3_BUCKET, key, ExtraArgs={"ContentType": ct})
-            print(f"Uploaded s3://{S3_BUCKET}/{key}")
+            if dry_run:
+                print(f"DRY-RUN s3://{S3_BUCKET}/{key} (ContentType={ct})")
+            else:
+                s3.upload_file(str(p), S3_BUCKET, key, ExtraArgs={"ContentType": ct})
+                print(f"Uploaded s3://{S3_BUCKET}/{key}")
     except ProfileNotFound as e:
         print(f"S3 upload skipped: profile not found: {e}")
         return
@@ -110,6 +113,10 @@ def upload_to_s3(paths):
         return
 
 def main():
+    parser = argparse.ArgumentParser(description="Export Swarm check-ins to local files and optionally S3.")
+    parser.add_argument("--no-s3", action="store_true", help="Do not upload outputs to S3 even if S3 env vars are set")
+    parser.add_argument("--dry-run", action="store_true", help="Print S3 destinations without uploading")
+    args = parser.parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     s = requests.Session()
@@ -169,7 +176,8 @@ def main():
         json.dump({"type":"FeatureCollection","features":features}, gj, ensure_ascii=False)
 
     print(f"Done → {NDJSON}, {CSV}, {GEOJSON}")
-    upload_to_s3([NDJSON, CSV, GEOJSON])
+    if not args.no_s3:
+        upload_to_s3([NDJSON, CSV, GEOJSON], dry_run=args.dry_run)
 
 if __name__ == "__main__":
     main()
