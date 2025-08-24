@@ -4,9 +4,14 @@ from datetime import datetime
 from pathlib import Path
 import requests
 from dotenv import load_dotenv
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 
 load_dotenv()
 token = os.getenv("FOURSQUARE_TOKEN")
+S3_BUCKET = os.getenv("S3_BUCKET")
+S3_PREFIX = os.getenv("S3_PREFIX") or os.getenv("S3_PATH")
+AWS_PROFILE = os.getenv("AWS_PROFILE") or os.getenv("MY_PERSONAL_PROFILE") or os.getenv("AWS_DEFAULT_PROFILE")
 
 # tiny config
 V = datetime.utcnow().strftime("%Y%m%d")   # version date
@@ -56,6 +61,27 @@ def as_feature(c):
         "type": c.get("type"),
     }
     return {"type":"Feature","geometry":{"type":"Point","coordinates":[lng,lat]},"properties":props}
+
+def upload_to_s3(paths):
+    if not S3_BUCKET:
+        return
+    try:
+        session = boto3.session.Session(profile_name=AWS_PROFILE) if AWS_PROFILE else boto3.session.Session()
+        s3 = session.client("s3")
+        for p in paths:
+            name = p.name
+            key = f"{S3_PREFIX.rstrip('/')}/{name}" if S3_PREFIX else name
+            ct = (
+                "application/x-ndjson" if name.endswith(".ndjson") else
+                "application/geo+json" if name.endswith(".geojson") else
+                "text/csv" if name.endswith(".csv") else
+                "application/octet-stream"
+            )
+            s3.upload_file(str(p), S3_BUCKET, key, ExtraArgs={"ContentType": ct})
+            print(f"Uploaded s3://{S3_BUCKET}/{key}")
+    except (BotoCoreError, ClientError) as e:
+        print(f"S3 upload failed: {e}")
+        return
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -117,6 +143,7 @@ def main():
         json.dump({"type":"FeatureCollection","features":features}, gj, ensure_ascii=False)
 
     print(f"Done → {NDJSON}, {CSV}, {GEOJSON}")
+    upload_to_s3([NDJSON, CSV, GEOJSON])
 
 if __name__ == "__main__":
     main()

@@ -17,7 +17,7 @@ This installs dependencies from `pyproject.toml` and `uv.lock` into `.venv/`.
 
 ## Usage
 
-1) Set your Foursquare API token
+1) Set your [Foursquare API token](https://docs.foursquare.com/developer/reference/personalization-apis-authentication)
 
 ```bash
 export FOURSQUARE_TOKEN="<your_token>"
@@ -25,7 +25,22 @@ export FOURSQUARE_TOKEN="<your_token>"
 # FOURSQUARE_TOKEN=<your_token>
 ```
 
-2) Run the exporter
+2) (Optional) Configure S3 upload
+
+Set these if you want the outputs uploaded to S3 after they are written locally:
+
+```bash
+# destination bucket
+export S3_BUCKET="stilesdata.com"
+
+# optional path/prefix inside the bucket
+export S3_PREFIX="data/swarm"
+
+# choose a profile (uses AWS_PROFILE, MY_PERSONAL_PROFILE, or AWS_DEFAULT_PROFILE)
+export AWS_PROFILE="haekeo"
+```
+
+3) Run the exporter
 
 ```bash
 uv run ./export_swarm.py
@@ -39,6 +54,8 @@ The script writes these files:
 - `data/checkins.csv`
 - `data/checkins.geojson`
 
+If S3 is configured, the same filenames are uploaded to `s3://$S3_BUCKET/$S3_PREFIX/`.
+
 ## Notes
 
 - The script paginates using the API page size and sleeps briefly between requests
@@ -49,6 +66,7 @@ The script writes these files:
 
 - Environment variables are loaded from the process and an optional `.env` file via `python-dotenv`
 - Example file is provided as `.env.example`
+ - S3 settings are optional: `S3_BUCKET`, `S3_PREFIX` (or `S3_PATH`), and one of `AWS_PROFILE`, `MY_PERSONAL_PROFILE`, or `AWS_DEFAULT_PROFILE`
 
 ## Development
 
