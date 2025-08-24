@@ -5,13 +5,14 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 import boto3
-from botocore.exceptions import BotoCoreError, ClientError
+from botocore.exceptions import BotoCoreError, ClientError, ProfileNotFound
 
 load_dotenv()
 token = os.getenv("FOURSQUARE_TOKEN")
 S3_BUCKET = os.getenv("S3_BUCKET")
 S3_PREFIX = os.getenv("S3_PREFIX") or os.getenv("S3_PATH")
 AWS_PROFILE = os.getenv("AWS_PROFILE") or os.getenv("MY_PERSONAL_PROFILE") or os.getenv("AWS_DEFAULT_PROFILE")
+AWS_REGION = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
 
 # tiny config
 V = datetime.utcnow().strftime("%Y%m%d")   # version date
@@ -66,8 +67,15 @@ def upload_to_s3(paths):
     if not S3_BUCKET:
         return
     try:
-        session = boto3.session.Session(profile_name=AWS_PROFILE) if AWS_PROFILE else boto3.session.Session()
+        session = (
+            boto3.session.Session(profile_name=AWS_PROFILE, region_name=AWS_REGION)
+            if AWS_PROFILE else
+            boto3.session.Session(region_name=AWS_REGION)
+        )
         s3 = session.client("s3")
+        prof_display = AWS_PROFILE or session.profile_name or "default"
+        pref_display = (S3_PREFIX.rstrip("/") + "/") if S3_PREFIX else ""
+        print(f"Uploading to s3://{S3_BUCKET}/{pref_display} using profile '{prof_display}'".rstrip("/"))
         for p in paths:
             name = p.name
             key = f"{S3_PREFIX.rstrip('/')}/{name}" if S3_PREFIX else name
@@ -79,7 +87,17 @@ def upload_to_s3(paths):
             )
             s3.upload_file(str(p), S3_BUCKET, key, ExtraArgs={"ContentType": ct})
             print(f"Uploaded s3://{S3_BUCKET}/{key}")
-    except (BotoCoreError, ClientError) as e:
+    except ProfileNotFound as e:
+        print(f"S3 upload skipped: profile not found: {e}")
+        return
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code") if hasattr(e, "response") else None
+        if code == "ExpiredToken":
+            print("S3 upload failed: credentials expired. If using AWS SSO, run 'aws sso login --profile " + (AWS_PROFILE or "<your_profile>") + "'.")
+        else:
+            print(f"S3 upload failed: {e}")
+        return
+    except BotoCoreError as e:
         print(f"S3 upload failed: {e}")
         return
 

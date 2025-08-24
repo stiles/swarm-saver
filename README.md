@@ -38,6 +38,7 @@ export S3_PREFIX="data/swarm"
 
 # choose a profile (uses AWS_PROFILE, MY_PERSONAL_PROFILE, or AWS_DEFAULT_PROFILE)
 export AWS_PROFILE="haekeo"
+export AWS_REGION="us-east-1"  # or your preferred region
 ```
 
 3) Run the exporter
@@ -55,6 +56,12 @@ The script writes these files:
 - `data/checkins.geojson`
 
 If S3 is configured, the same filenames are uploaded to `s3://$S3_BUCKET/$S3_PREFIX/`.
+
+If your AWS credentials are via SSO and you see ExpiredToken errors, run:
+
+```bash
+aws sso login --profile "$AWS_PROFILE"
+```
 
 ## Notes
 
