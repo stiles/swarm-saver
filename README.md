@@ -21,6 +21,8 @@ This installs dependencies from `pyproject.toml` and `uv.lock` into `.venv/`.
 
 ```bash
 export FOURSQUARE_TOKEN="<your_token>"
+# or create a .env file in the project root:
+# FOURSQUARE_TOKEN=<your_token>
 ```
 
 2) Run the exporter
@@ -42,6 +44,11 @@ The script writes these files:
 - The script paginates using the API page size and sleeps briefly between requests
 - If you get 401 errors check `FOURSQUARE_TOKEN`
 - Check-ins without coordinates do not appear in the GeoJSON output
+
+## Environment variables
+
+- Environment variables are loaded from the process and an optional `.env` file via `python-dotenv`
+- Example file is provided as `.env.example`
 
 ## Development
 

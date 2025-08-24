@@ -3,7 +3,9 @@ import os, time, json, csv, math, sys
 from datetime import datetime
 from pathlib import Path
 import requests
+from dotenv import load_dotenv
 
+load_dotenv()
 token = os.getenv("FOURSQUARE_TOKEN")
 
 # tiny config

@@ -149,6 +149,10 @@ env.bak/
 venv.bak/
 .venv/
 
+# Project data outputs
+data/
+!data/.gitkeep
+
 # Spyder project settings
 .spyderproject
 .spyproject
